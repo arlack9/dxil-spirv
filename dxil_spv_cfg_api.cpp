@@ -1,5 +1,9 @@
 // dxil_spv_cfg_api.cpp - CFG extraction API for dxil-spirv
 #include "dxil_spirv_c.h"
+#include "dxil_converter.hpp"
+#include "bc/module.hpp"
+#include <stdint.h>
+#include <stddef.h>
 
 extern "C" {
 
@@ -13,18 +17,18 @@ DXIL_SPV_PUBLIC_API dxil_spv_result dxil_spv_converter_get_cfg(
 {
     if (!converter || !headers || !merges || !continues || !hints || !count)
         return DXIL_SPV_ERROR_INVALID_ARGUMENT;
-      auto* conv_struct = static_cast<struct dxil_spv_converter_s*>(converter);
-    if (!conv_struct)
+    
+    /* The converter is actually a pointer to the internal Converter object */
+    auto* impl = static_cast<dxil_spv::Converter*>(converter);
+    if (!impl)
         return DXIL_SPV_ERROR_INVALID_ARGUMENT;
     
     /* Get the LLVM module from the bitcode parser */
-    auto* module = conv_struct->bc_parser.get_module();
-    if (!module)
-        return DXIL_SPV_ERROR_NOT_FOUND;
+    auto* module = impl->get_module();
+    if (!module || !module->has_cfg_data())
+        return DXIL_SPV_ERROR_NO_DATA;
     
-    if (!module->has_cfg_data())
-        return DXIL_SPV_ERROR_NOT_FOUND;
-    
+    /* Return const pointers to the CFG data arrays stored in the module */
     *headers = module->get_cfg_headers().data();
     *merges = module->get_cfg_merges().data();
     *continues = module->get_cfg_continues().data();

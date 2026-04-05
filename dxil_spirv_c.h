@@ -26,6 +26,7 @@
 #define DXIL_SPV_C_API_H
 
 #include <stddef.h>
+#include <stdint.h>
 
 /* C89-compatible wrapper for dxil_spv. */
 
