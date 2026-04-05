@@ -14,12 +14,11 @@ DXIL_SPV_PUBLIC_API dxil_spv_result dxil_spv_converter_get_cfg(
     const uint32_t** continues,
     const uint32_t** hints,
     size_t* count)
-{
-    if (!converter || !headers || !merges || !continues || !hints || !count)
+{    if (!converter || !headers || !merges || !continues || !hints || !count)
         return DXIL_SPV_ERROR_INVALID_ARGUMENT;
     
     /* The converter is actually a pointer to the internal Converter object */
-    auto* impl = static_cast<dxil_spv::Converter*>(converter);
+    auto* impl = reinterpret_cast<dxil_spv::Converter*>(converter);
     if (!impl)
         return DXIL_SPV_ERROR_INVALID_ARGUMENT;
     
