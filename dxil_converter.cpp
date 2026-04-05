@@ -6790,6 +6790,11 @@ String Converter::get_analysis_warnings() const
 	return str;
 }
 
+LLVMBC::Module* Converter::get_module() const
+{
+	return impl->bitcode_parser.get_module();
+}
+
 bool Converter::Impl::emit_execution_modes_node()
 {
 	// It will be necessary to override all this metadata through some API.

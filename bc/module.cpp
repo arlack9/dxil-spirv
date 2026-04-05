@@ -35,6 +35,7 @@
 
 #include "llvm_decoder.h"
 
+#include "cfg_metadata_parser.hpp"
 namespace LLVMBC
 {
 enum class KnownBlocks : uint32_t
@@ -1031,6 +1032,12 @@ bool ModuleParseContext::parse_metadata_record(const BlockOrRecord &entry, unsig
 
 	case MetaDataRecord::NAMED_NODE:
 	{
+		//5-4-26
+		// ========== ADD THIS LINE - Extract CFG metadata ==========
+    	parse_control_flow_annotations(*this, entry);
+    	// ===========================================================
+
+
 		Vector<MDNode *> ops;
 		ops.reserve(entry.ops.size());
 		for (auto &op : entry.ops)

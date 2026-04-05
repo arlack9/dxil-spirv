@@ -1107,6 +1107,15 @@ DXIL_SPV_PUBLIC_API dxil_spv_result dxil_spv_converter_set_meta_descriptor(
 		dxil_spv_converter converter, dxil_spv_meta_descriptor meta,
 		dxil_spv_meta_descriptor_kind kind, unsigned desc_set, unsigned binding_or_push_index);
 
+/* Gets CFG (control flow graph) metadata from compiled shader. */
+DXIL_SPV_PUBLIC_API dxil_spv_result dxil_spv_converter_get_cfg(
+    dxil_spv_converter converter,
+    const uint32_t** headers,
+    const uint32_t** merges,
+    const uint32_t** continues,
+    const uint32_t** hints,
+    size_t* count);
+
 /* Use an optimized allocation scheme.
  * Call begin before allocating any dxil_spv objects,
  * and end after all dxil_spv created by this thread is destroyed.

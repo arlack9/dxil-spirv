@@ -38,7 +38,6 @@ class Builder;
 #include <stddef.h>
 #include <type_traits>
 #include <utility>
-#include <vector>  // ADD THIS for CFG storage
 
 // A reasonably small LLVM C++ API lookalike.
 
@@ -85,24 +84,6 @@ public:
 	Vector<MDNode *>::const_iterator unnamed_metadata_begin() const;
 	Vector<MDNode *>::const_iterator unnamed_metadata_end() const;
 
-	// ========== ADD CFG STORAGE METHODS ==========
-	void set_cfg_data(std::vector<uint32_t>&& h, 
-	                  std::vector<uint32_t>&& m,
-	                  std::vector<uint32_t>&& c,
-	                  std::vector<uint32_t>&& hi) {
-		cfg_headers = std::move(h);
-		cfg_merges = std::move(m);
-		cfg_continues = std::move(c);
-		cfg_hints = std::move(hi);
-	}
-	
-	const std::vector<uint32_t>& get_cfg_headers() const { return cfg_headers; }
-	const std::vector<uint32_t>& get_cfg_merges() const { return cfg_merges; }
-	const std::vector<uint32_t>& get_cfg_continues() const { return cfg_continues; }
-	const std::vector<uint32_t>& get_cfg_hints() const { return cfg_hints; }
-	bool has_cfg_data() const { return !cfg_headers.empty(); }
-	// =============================================
-
 private:
 	LLVMContext &context;
 	Vector<Function *> functions;
@@ -110,13 +91,6 @@ private:
 	UnorderedMap<uint64_t, String> value_symtab;
 	UnorderedMap<String, NamedMDNode *> named_metadata;
 	Vector<MDNode *> unnamed_metadata;
-	
-	// ========== ADD CFG STORAGE MEMBERS ==========
-	std::vector<uint32_t> cfg_headers;
-	std::vector<uint32_t> cfg_merges;
-	std::vector<uint32_t> cfg_continues;
-	std::vector<uint32_t> cfg_hints;
-	// =============================================
 };
 
 Module *parseIR(LLVMContext &context, const void *data, size_t size);

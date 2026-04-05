@@ -12,7 +12,10 @@ dxil_spirv_include_dirs = include_directories([
   'bc',
   'debug',
   'util',
-  'DxilCfgReader',           # ADD THIS - for CFG reader headers
+  'include',                                         # ADD THIS for public headers
+  # 'DxilCfgReader',                                 # REMOVED - folder deleted
+  'third_party/SPIRV-Tools/include',
+  'third_party/SPIRV-Tools/source',
   'third_party/bc-decoder',
   'third_party/glslang-spirv',
   'third_party/spirv-headers/include/spirv/unified1',
@@ -32,6 +35,7 @@ add_project_arguments(dxil_spirv_compiler.get_supported_arguments([
 dxil_spirv_src = [
   # dxil-spirv-c
   'dxil_spirv_c.cpp',
+  'dxil_spv_cfg_api.cpp',
 
   # bc-decoder
   'third_party/bc-decoder/llvm_decoder.cpp',
@@ -50,6 +54,7 @@ dxil_spirv_src = [
   'bc/module.cpp',
   'bc/metadata.cpp',
   'bc/disassembler.cpp',
+  'bc/cfg_metadata_parser.cpp',                     # ADD THIS - new CFG parser
 
   # spirv-module
   'spirv_module.cpp',
@@ -66,8 +71,8 @@ dxil_spirv_src = [
   'node.cpp',
   'dxil_parser.cpp',
 
-  # DXIL CFG Reader - ADD THIS
-  'DxilCfgReader/dxil_cfg_extractor.cpp',
+  # DXIL CFG Reader - REMOVED old reference
+  # 'DxilCfgReader/dxil_cfg_extractor.cpp',         # REMOVED
 
   'opcodes/dxil/dxil_ags.cpp',
   'opcodes/dxil/dxil_nvapi.cpp',
@@ -118,5 +123,5 @@ dxil_spirv_lib = static_library('dxil-spirv', dxil_spirv_src,
   ])
 
 dxil_spirv_dep = declare_dependency(
-  include_directories : include_directories('.', 'DxilCfgReader'),  # ADD DxilCfgReader
+  include_directories : include_directories('.', 'include', 'third_party/SPIRV-Tools/include'),
   link_with           : [ dxil_spirv_lib ])

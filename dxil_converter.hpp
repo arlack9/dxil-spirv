@@ -1048,6 +1048,9 @@ public:
 	void set_meta_descriptor(MetaDescriptor desc, MetaDescriptorKind kind,
 	                         uint32_t desc_set, uint32_t binding_or_push_index);
 
+	// Get access to the parsed LLVM module for low-level queries
+	LLVMBC::Module* get_module() const;
+
 	struct Impl;
 
 private:
