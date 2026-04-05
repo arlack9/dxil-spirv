@@ -6792,7 +6792,7 @@ String Converter::get_analysis_warnings() const
 
 LLVMBC::Module* Converter::get_module() const
 {
-	return impl->bitcode_parser.get_module();
+	return &impl->bitcode_parser.get_module();
 }
 
 bool Converter::Impl::emit_execution_modes_node()
