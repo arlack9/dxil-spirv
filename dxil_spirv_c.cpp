@@ -792,6 +792,23 @@ dxil_spv_result dxil_spv_converter_run(dxil_spv_converter converter)
 		return DXIL_SPV_ERROR_GENERIC;
 	}
 
+	    // --- MINIMAL CFG EXTRACTION --custom ARJUN--
+    {
+        auto &llvm_module = converter->bc_parser.get_module();
+        std::vector<uint32_t> h, m, c, hi;
+        uint32_t id = 0;
+        for (auto &func : llvm_module)
+            for (auto &bb : func)
+            {
+                h.push_back(id++);
+                m.push_back(0);
+                c.push_back(0);
+                hi.push_back(0);
+            }
+        if (!h.empty()) llvm_module.set_cfg_data(std::move(h), std::move(m), std::move(c), std::move(hi));
+    }
+    // --------------------------------
+
 	{
 		dxil_spv::CFGStructurizer structurizer(entry_point.entry.entry, *entry_point.node_pool, module);
 
