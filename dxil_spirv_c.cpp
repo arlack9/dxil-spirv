@@ -29,6 +29,7 @@
 #include "dxil_converter.hpp"
 #include "dxil_parser.hpp"
 #include "bc/function.hpp"  // ADD THIS LINE
+#include "bc/instruction.hpp" //new line added
 #include "llvm_bitcode_parser.hpp"
 #include "logging.hpp"
 #include "spirv_module.hpp"
@@ -794,33 +795,83 @@ dxil_spv_result dxil_spv_converter_run(dxil_spv_converter converter)
 	}
 
 	    // --- MINIMAL CFG EXTRACTION --custom ARJUN--
-         // --- MINIMAL CFG EXTRACTION (DIRECT LOG TEST) ---
-    {
-        auto &llvm_module = converter->bc_parser.get_module();
+    //     // --- DEBUG TERMINATOR ---
+    // {
+    //     auto &llvm_module = converter->bc_parser.get_module();
         
-        // Open a file directly from the DLL!
-        FILE *f = fopen("dxil_direct_extraction.txt", "a");
-        if (f)
-        {
-            fprintf(f, "Shader: %s\n", converter->entry_point.c_str());
-            uint32_t id = 0;
+    //     FILE *f = fopen("dxil_direct_extraction.txt", "a");
+    //     if (f)
+    //     {
+    //         fprintf(f, "=== Shader: %s ===\n", converter->entry_point.c_str());
+    //         uint32_t id = 0;
             
-            for (auto *func : llvm_module)
-            {
-                if (!func) continue;
+    //         for (auto *func : llvm_module)
+    //         {
+    //             if (!func) continue;
                 
-                // Count basic blocks safely without crashing
-                // (Assuming standard LLVM bb iteration, if it crashes here, we adapt)
-                for (auto &bb : *func)
+    //             for (auto &bb : *func)
+    //             {
+    //                 auto *term = bb.getTerminator(); 
+                    
+    //                 if (term)
+    //                 {
+    //                     // operands is a public Vector, let's check its actual size directly!
+    //                     unsigned ops = term->operands.size(); 
+    //                     fprintf(f, "Block %u -> Has Term! Ops size: %u\n", id, ops);
+    //                 }
+    //                 else
+    //                 {
+    //                     fprintf(f, "Block %u -> NO TERMINATOR (NULL)\n", id);
+    //                 }
+                    
+    //                 id++;
+    //             }
+    //         }
+    //         fprintf(f, "Total Blocks: %u\n\n", id);
+    //         fclose(f);
+    //     }
+    // }
+    // // --------------------------------
+
+	    // --- MINIMAL CFG EXTRACTION --custom ARJUN--
+    // --- DEBUG TERMINATOR ---
+{
+    auto &llvm_module = converter->bc_parser.get_module();
+    
+    FILE *f = fopen("dxil_direct_extraction.txt", "a");
+    if (f)
+    {
+        fprintf(f, "=== Shader: %s ===\n", converter->entry_point.c_str());
+        uint32_t id = 0;
+        
+        for (auto *func : llvm_module)
+        {
+            if (!func) continue;
+            
+            for (auto &bb : *func)
+            {
+                auto *term = bb.getTerminator(); 
+                
+                if (term)
                 {
-                    fprintf(f, "Block %u\n", id++);
+                    // FIX: Use the public accessor getNumOperands() instead of the protected member
+                    unsigned ops = term->getNumOperands(); 
+                    fprintf(f, "Block %u -> Has Term! Ops size: %u\n", id, ops);
                 }
+                else
+                {
+                    fprintf(f, "Block %u -> NO TERMINATOR (NULL)\n", id);
+                }
+                
+                id++;
             }
-            fprintf(f, "Total Blocks: %u\n\n", id);
-            fclose(f);
         }
+        fprintf(f, "Total Blocks: %u\n\n", id);
+        fclose(f);
     }
-    // --------------------------------
+}
+// --------------------------------
+// --------------------------------
     // --------------------------------
 
 	{
