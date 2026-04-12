@@ -795,83 +795,60 @@ dxil_spv_result dxil_spv_converter_run(dxil_spv_converter converter)
 	}
 
 	    // --- MINIMAL CFG EXTRACTION --custom ARJUN--
-    //     // --- DEBUG TERMINATOR ---
-    // {
-    //     auto &llvm_module = converter->bc_parser.get_module();
-        
-    //     FILE *f = fopen("dxil_direct_extraction.txt", "a");
-    //     if (f)
-    //     {
-    //         fprintf(f, "=== Shader: %s ===\n", converter->entry_point.c_str());
-    //         uint32_t id = 0;
-            
-    //         for (auto *func : llvm_module)
-    //         {
-    //             if (!func) continue;
-                
-    //             for (auto &bb : *func)
-    //             {
-    //                 auto *term = bb.getTerminator(); 
-                    
-    //                 if (term)
-    //                 {
-    //                     // operands is a public Vector, let's check its actual size directly!
-    //                     unsigned ops = term->operands.size(); 
-    //                     fprintf(f, "Block %u -> Has Term! Ops size: %u\n", id, ops);
-    //                 }
-    //                 else
-    //                 {
-    //                     fprintf(f, "Block %u -> NO TERMINATOR (NULL)\n", id);
-    //                 }
-                    
-    //                 id++;
-    //             }
-    //         }
-    //         fprintf(f, "Total Blocks: %u\n\n", id);
-    //         fclose(f);
-    //     }
-    // }
-    // // --------------------------------
-
-	    // --- MINIMAL CFG EXTRACTION --custom ARJUN--
-    // --- DEBUG TERMINATOR ---
-{
-    auto &llvm_module = converter->bc_parser.get_module();
-    
-    FILE *f = fopen("dxil_direct_extraction.txt", "a");
-    if (f)
+           // --- REAL CFG EXTRACTION (Fix the Hiding Bug) ---
     {
-        fprintf(f, "=== Shader: %s ===\n", converter->entry_point.c_str());
-        uint32_t id = 0;
+        auto &llvm_module = converter->bc_parser.get_module();
         
-        for (auto *func : llvm_module)
+        FILE *f = fopen("dxil_direct_extraction.txt", "a");
+        if (f)
         {
-            if (!func) continue;
+            fprintf(f, "=== Shader: %s ===\n", converter->entry_point.c_str());
+            uint32_t id = 0;
             
-            for (auto &bb : *func)
+            for (auto *func : llvm_module)
             {
-                auto *term = bb.getTerminator(); 
+                if (!func) continue;
                 
-                if (term)
+                for (auto &bb : *func)
                 {
-                    // FIX: Use the public accessor getNumOperands() instead of the protected member
-                    unsigned ops = term->getNumOperands(); 
-                    fprintf(f, "Block %u -> Has Term! Ops size: %u\n", id, ops);
+                    auto *term = bb.getTerminator(); 
+                    
+                    if (term)
+                    {
+                        // CAST TO VALUE* to bypass Instruction's static hiding!
+                        LLVMBC::Value *v = term;
+                        auto kind = v->get_value_kind();
+                        
+                        if (kind == LLVMBC::ValueKind::Branch)
+                        {
+                            auto *branch = static_cast<LLVMBC::BranchInst*>(term);
+                            if (branch->isConditional())
+                                fprintf(f, "Block %u -> [IF/ELSE BRANCH]\n", id);
+                            else
+                                fprintf(f, "Block %u -> [UNCONDITIONAL JUMP]\n", id);
+                        }
+                        else if (kind == LLVMBC::ValueKind::Switch)
+                            fprintf(f, "Block %u -> [SWITCH STATEMENT]\n", id);
+                        else if (kind == LLVMBC::ValueKind::Return)
+                            fprintf(f, "Block %u -> [RETURN/EXIT]\n", id);
+                        else if (kind == LLVMBC::ValueKind::Unreachable)
+                            fprintf(f, "Block %u -> [UNREACHABLE]\n", id);
+                        else
+                            fprintf(f, "Block %u -> [UNKNOWN: %d]\n", id, (int)kind);
+                    }
+                    else
+                    {
+                        fprintf(f, "Block %u -> [NO TERM]\n", id);
+                    }
+                    
+                    id++;
                 }
-                else
-                {
-                    fprintf(f, "Block %u -> NO TERMINATOR (NULL)\n", id);
-                }
-                
-                id++;
             }
+            fprintf(f, "Total Blocks: %u\n\n", id);
+            fclose(f);
         }
-        fprintf(f, "Total Blocks: %u\n\n", id);
-        fclose(f);
     }
-}
-// --------------------------------
-// --------------------------------
+    // --------------------------------
     // --------------------------------
 
 	{
