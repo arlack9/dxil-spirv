@@ -35,7 +35,7 @@
 #include "spirv_module.hpp"
 #include <string.h>
 #include <new>
-
+#include <algorithm>
 using namespace dxil_spv;
 
 void dxil_spv_get_version(unsigned *major, unsigned *minor, unsigned *patch)
@@ -796,7 +796,61 @@ dxil_spv_result dxil_spv_converter_run(dxil_spv_converter converter)
 
 	    // --- MINIMAL CFG EXTRACTION --custom ARJUN--
            // --- REAL CFG EXTRACTION (Fix the Hiding Bug) ---
-    {
+    // {
+    //     auto &llvm_module = converter->bc_parser.get_module();
+        
+    //     FILE *f = fopen("dxil_direct_extraction.txt", "a");
+    //     if (f)
+    //     {
+    //         fprintf(f, "=== Shader: %s ===\n", converter->entry_point.c_str());
+    //         uint32_t id = 0;
+            
+    //         for (auto *func : llvm_module)
+    //         {
+    //             if (!func) continue;
+                
+    //             for (auto &bb : *func)
+    //             {
+    //                 auto *term = bb.getTerminator(); 
+                    
+    //                 if (term)
+    //                 {
+    //                     // CAST TO VALUE* to bypass Instruction's static hiding!
+    //                     LLVMBC::Value *v = term;
+    //                     auto kind = v->get_value_kind();
+                        
+    //                     if (kind == LLVMBC::ValueKind::Branch)
+    //                     {
+    //                         auto *branch = static_cast<LLVMBC::BranchInst*>(term);
+    //                         if (branch->isConditional())
+    //                             fprintf(f, "Block %u -> [IF/ELSE BRANCH]\n", id);
+    //                         else
+    //                             fprintf(f, "Block %u -> [UNCONDITIONAL JUMP]\n", id);
+    //                     }
+    //                     else if (kind == LLVMBC::ValueKind::Switch)
+    //                         fprintf(f, "Block %u -> [SWITCH STATEMENT]\n", id);
+    //                     else if (kind == LLVMBC::ValueKind::Return)
+    //                         fprintf(f, "Block %u -> [RETURN/EXIT]\n", id);
+    //                     else if (kind == LLVMBC::ValueKind::Unreachable)
+    //                         fprintf(f, "Block %u -> [UNREACHABLE]\n", id);
+    //                     else
+    //                         fprintf(f, "Block %u -> [UNKNOWN: %d]\n", id, (int)kind);
+    //                 }
+    //                 else
+    //                 {
+    //                     fprintf(f, "Block %u -> [NO TERM]\n", id);
+    //                 }
+                    
+    //                 id++;
+    //             }
+    //         }
+    //         fprintf(f, "Total Blocks: %u\n\n", id);
+    //         fclose(f);
+    //     }
+    // }
+    // --------------------------------
+    
+	    {
         auto &llvm_module = converter->bc_parser.get_module();
         
         FILE *f = fopen("dxil_direct_extraction.txt", "a");
@@ -815,7 +869,6 @@ dxil_spv_result dxil_spv_converter_run(dxil_spv_converter converter)
                     
                     if (term)
                     {
-                        // CAST TO VALUE* to bypass Instruction's static hiding!
                         LLVMBC::Value *v = term;
                         auto kind = v->get_value_kind();
                         
@@ -823,12 +876,12 @@ dxil_spv_result dxil_spv_converter_run(dxil_spv_converter converter)
                         {
                             auto *branch = static_cast<LLVMBC::BranchInst*>(term);
                             if (branch->isConditional())
-                                fprintf(f, "Block %u -> [IF/ELSE BRANCH]\n", id);
+                                fprintf(f, "Block %u -> [IF/ELSE BRANCH (2 edges)]\n", id);
                             else
-                                fprintf(f, "Block %u -> [UNCONDITIONAL JUMP]\n", id);
+                                fprintf(f, "Block %u -> [UNCONDITIONAL JUMP (1 edge)]\n", id);
                         }
                         else if (kind == LLVMBC::ValueKind::Switch)
-                            fprintf(f, "Block %u -> [SWITCH STATEMENT]\n", id);
+                            fprintf(f, "Block %u -> [SWITCH STATEMENT (multi-edge)]\n", id);
                         else if (kind == LLVMBC::ValueKind::Return)
                             fprintf(f, "Block %u -> [RETURN/EXIT]\n", id);
                         else if (kind == LLVMBC::ValueKind::Unreachable)
@@ -838,7 +891,7 @@ dxil_spv_result dxil_spv_converter_run(dxil_spv_converter converter)
                     }
                     else
                     {
-                        fprintf(f, "Block %u -> [NO TERM]\n", id);
+                        fprintf(f, "Block %u -> [NO TERMINATOR]\n", id);
                     }
                     
                     id++;
@@ -848,8 +901,9 @@ dxil_spv_result dxil_spv_converter_run(dxil_spv_converter converter)
             fclose(f);
         }
     }
-    // --------------------------------
-    // --------------------------------
+	
+	
+	// --------------------------------
 
 	{
 		dxil_spv::CFGStructurizer structurizer(entry_point.entry.entry, *entry_point.node_pool, module);
