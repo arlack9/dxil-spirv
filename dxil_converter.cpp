@@ -6554,10 +6554,11 @@ bool Converter::Impl::emit_instruction(CFGNode *block, const llvm::Instruction &
 	}	//--------------ARJUN-----logger---16/4/26---------
 	// ============================================================
     // DEBUG CORRELATION TRACKING - Add these lines
-    // ============================================================
-    debug_track_dxil_source(instruction);
+    // ============================================================    debug_track_dxil_source(instruction);
     if (debug_correlation_enabled)
+    {
         debug_dxil_instr_counter++;
+    }
     // ============================================================
 	//-----------------------------------------------
 
@@ -9286,9 +9287,9 @@ void Converter::Impl::add(Operation *op, bool is_rov)
     // ============================================================
     // DEBUG CORRELATION TRACKING - Tag the operation
     // ============================================================
-    if (debug_correlation_enabled)
+    if (debug_correlation_enabled && debug_dxil_instr_counter > 0)
     {
-        op->debug_dxil_id = debug_dxil_instr_counter;
+        op->debug_dxil_id = debug_dxil_instr_counter - 1;  // Use last DXIL ID (don't increment)
         op->debug_dxil_op = debug_current_dxil_op;
         op->debug_dxil_kind = debug_current_dxil_kind;
         op->debug_block_id = debug_dxil_block_counter;
@@ -9310,10 +9311,65 @@ void Converter::Impl::debug_track_dxil_source(const llvm::Instruction &instr)
     if (!debug_correlation_enabled)
         return;
     
-    // Simplified implementation: just track the kind
     auto *value = static_cast<const LLVMBC::Value*>(&instr);
     debug_current_dxil_kind = static_cast<uint32_t>(value->get_value_kind());
-    debug_current_dxil_op = UINT32_MAX;
+    debug_current_dxil_op = 0;  // Default to 0 instead of UINT32_MAX
+    
+    // Try to extract specific opcode based on kind
+    if (debug_current_dxil_kind == 15)  // BinaryOp
+    {
+        auto &non_const_instr = const_cast<llvm::Instruction&>(instr);
+        auto *binop = static_cast<LLVMBC::BinaryOperator*>(&non_const_instr);
+        if (binop)
+            debug_current_dxil_op = static_cast<uint32_t>(binop->getOpcode());
+    }
+    else if (debug_current_dxil_kind == 17)  // Cast
+    {
+        auto &non_const_instr = const_cast<llvm::Instruction&>(instr);
+        auto *cast_inst = static_cast<LLVMBC::CastInst*>(&non_const_instr);
+        if (cast_inst)
+            debug_current_dxil_op = static_cast<uint32_t>(cast_inst->getOpcode());
+    }
+    else if (debug_current_dxil_kind == 25 || debug_current_dxil_kind == 26)  // FCmp/ICmp
+    {
+        auto &non_const_instr = const_cast<llvm::Instruction&>(instr);
+        auto *cmp = static_cast<LLVMBC::CmpInst*>(&non_const_instr);
+        if (cmp)
+            debug_current_dxil_op = static_cast<uint32_t>(cmp->getPredicate());
+    }
+    else if (debug_current_dxil_kind == 16)  // UnaryOp
+    {
+        auto &non_const_instr = const_cast<llvm::Instruction&>(instr);
+        auto *unop = static_cast<LLVMBC::UnaryOperator*>(&non_const_instr);
+        if (unop)
+            debug_current_dxil_op = static_cast<uint32_t>(unop->getOpcode());
+    }
+    else if (debug_current_dxil_kind == 30)  // AtomicRMW
+    {
+        auto &non_const_instr = const_cast<llvm::Instruction&>(instr);
+        auto *atomic = static_cast<LLVMBC::AtomicRMWInst*>(&non_const_instr);
+        if (atomic)
+            debug_current_dxil_op = static_cast<uint32_t>(atomic->getOperation());
+    }
+    // FIX: For Call instructions, try to extract dx.op opcode
+    else if (debug_current_dxil_kind == 35)  // Call
+    {
+        auto &non_const_instr = const_cast<llvm::Instruction&>(instr);
+        auto *call = static_cast<LLVMBC::CallInst*>(&non_const_instr);
+        if (call && call->getNumOperands() > 0)
+        {
+            auto *arg = call->getOperand(0);
+            if (arg)
+            {
+                auto *const_int = static_cast<LLVMBC::ConstantInt*>(arg);
+                if (const_int)
+                {
+                    debug_current_dxil_op = static_cast<uint32_t>(
+                        const_int->getUniqueInteger().getZExtValue());
+                }
+            }
+        }
+    }
 }
 
 void Converter::Impl::debug_write_correlation_report(CFGNode *entry, CFGNodePool &pool)
@@ -9420,12 +9476,11 @@ void Converter::Impl::debug_write_correlation_report(CFGNode *entry, CFGNodePool
         // Second pass: output grouped correlations
         for (const auto& mapping : mappings)
         {
-            const char* dxil_name = debug_dxil_kind_name(mapping.dxil_kind);
-
-            fprintf(f, "  DXIL[%u] %-15s (op=%10u) -> %zu SPIR-V ops:\n",
+            const char* dxil_name = debug_dxil_kind_name(mapping.dxil_kind);            fprintf(f, "  DXIL[%u] %-15s (op=%10u) -> %zu SPIR-V ops:\n",
                     mapping.dxil_id,
                     dxil_name,
-                    mapping.dxil_op);
+                    mapping.dxil_op,
+                    mapping.spirv_ops.size());
 
             for (size_t i = 0; i < mapping.spirv_ops.size(); ++i)
             {
