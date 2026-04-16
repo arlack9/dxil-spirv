@@ -796,320 +796,111 @@ dxil_spv_result dxil_spv_converter_run(dxil_spv_converter converter)
 	}
 
 	    // --- MINIMAL CFG EXTRACTION --custom ARJUN--
-           // --- REAL CFG EXTRACTION (Fix the Hiding Bug) ---
-    // {
-    //     auto &llvm_module = converter->bc_parser.get_module();
+
+// //--------------working -cgf-----------tween-id block--------------------
+// 	// Add this right above the extraction block so it lives forever
+// static std::mutex file_write_mutex; 
+
+//     {
+//         auto &llvm_module = converter->bc_parser.get_module();
         
-    //     FILE *f = fopen("dxil_direct_extraction.txt", "a");
-    //     if (f)
-    //     {
-    //         fprintf(f, "=== Shader: %s ===\n", converter->entry_point.c_str());
-    //         uint32_t id = 0;
-            
-    //         for (auto *func : llvm_module)
-    //         {
-    //             if (!func) continue;
-                
-    //             for (auto &bb : *func)
-    //             {
-    //                 auto *term = bb.getTerminator(); 
-                    
-    //                 if (term)
-    //                 {
-    //                     // CAST TO VALUE* to bypass Instruction's static hiding!
-    //                     LLVMBC::Value *v = term;
-    //                     auto kind = v->get_value_kind();
-                        
-    //                     if (kind == LLVMBC::ValueKind::Branch)
-    //                     {
-    //                         auto *branch = static_cast<LLVMBC::BranchInst*>(term);
-    //                         if (branch->isConditional())
-    //                             fprintf(f, "Block %u -> [IF/ELSE BRANCH]\n", id);
-    //                         else
-    //                             fprintf(f, "Block %u -> [UNCONDITIONAL JUMP]\n", id);
-    //                     }
-    //                     else if (kind == LLVMBC::ValueKind::Switch)
-    //                         fprintf(f, "Block %u -> [SWITCH STATEMENT]\n", id);
-    //                     else if (kind == LLVMBC::ValueKind::Return)
-    //                         fprintf(f, "Block %u -> [RETURN/EXIT]\n", id);
-    //                     else if (kind == LLVMBC::ValueKind::Unreachable)
-    //                         fprintf(f, "Block %u -> [UNREACHABLE]\n", id);
-    //                     else
-    //                         fprintf(f, "Block %u -> [UNKNOWN: %d]\n", id, (int)kind);
-    //                 }
-    //                 else
-    //                 {
-    //                     fprintf(f, "Block %u -> [NO TERM]\n", id);
-    //                 }
-                    
-    //                 id++;
-    //             }
-    //         }
-    //         fprintf(f, "Total Blocks: %u\n\n", id);
-    //         fclose(f);
-    //     }
-    // }
-    // --------------------------------
-    
-	//     {
-    //     auto &llvm_module = converter->bc_parser.get_module();
+//         // ==========================================
+//         // THREAD-SAFE FILE WRITING
+//         // ==========================================
+//         std::lock_guard<std::mutex> lock(file_write_mutex); // Threads wait here!
         
-    //     FILE *f = fopen("dxil_direct_extraction.txt", "a");
-    //     if (f)
-    //     {
-    //         fprintf(f, "=== Shader: %s ===\n", converter->entry_point.c_str());
-    //         uint32_t id = 0;
+//         FILE *f = fopen("dxil_direct_extraction.txt", "a"); // Use "a" to keep all shaders!
+//         if (f)
+//         {
+//             fprintf(f, "=== Shader: %s ===\n", converter->entry_point.c_str());
             
-    //         for (auto *func : llvm_module)
-    //         {
-    //             if (!func) continue;
+//             for (auto *func : llvm_module)
+//             {
+//                 if (!func) continue;
                 
-    //             for (auto &bb : *func)
-    //             {
-    //                 auto *term = bb.getTerminator(); 
+//                 std::unordered_map<uint64_t, uint32_t> id_map;
+//                 struct BranchInfo { uint32_t id; LLVMBC::BranchInst* branch; };
+//                 std::vector<BranchInfo> pending_branches;
+//                 uint32_t id = 0;
+
+//                 // PASS 1: Collect Bitcode IDs
+//                 for (auto &bb : *func)
+//                 {
+//                     uint64_t bitcode_id = bb.get_tween_id(); 
+//                     id_map[bitcode_id] = id;
                     
-    //                 if (term)
-    //                 {
-    //                     LLVMBC::Value *v = term;
-    //                     auto kind = v->get_value_kind();
+//                     auto *term = bb.getTerminator(); 
+//                     if (term)
+//                     {
+//                         LLVMBC::Value *v = term;
+//                         if (v->get_value_kind() == LLVMBC::ValueKind::Branch)
+//                             pending_branches.push_back({id, static_cast<LLVMBC::BranchInst*>(term)});
+//                         else if (v->get_value_kind() == LLVMBC::ValueKind::Return)
+//                             fprintf(f, "Block %u -> [RETURN/EXIT]\n", id);
+//                         else if (v->get_value_kind() == LLVMBC::ValueKind::Switch)
+//                             fprintf(f, "Block %u -> [SWITCH]\n", id);
+//                         else if (v->get_value_kind() == LLVMBC::ValueKind::Unreachable)
+//                             fprintf(f, "Block %u -> [UNREACHABLE]\n", id);
+//                     }
+//                     id++;
+//                 }
+
+//                 // PASS 2: THE FINAL WORKING VERSION
+//                 for (auto &info : pending_branches)
+//                 {
+//                     auto *branch = info.branch;
+//                     if (branch->isConditional())
+//                     {
+//                         auto *true_ptr = branch->getSuccessor(0);
+//                         auto *false_ptr = branch->getSuccessor(1);
                         
-    //                     if (kind == LLVMBC::ValueKind::Branch)
-    //                     {
-    //                         auto *branch = static_cast<LLVMBC::BranchInst*>(term);
-    //                         if (branch->isConditional())
-    //                             fprintf(f, "Block %u -> [IF/ELSE BRANCH (2 edges)]\n", id);
-    //                         else
-    //                             fprintf(f, "Block %u -> [UNCONDITIONAL JUMP (1 edge)]\n", id);
-    //                     }
-    //                     else if (kind == LLVMBC::ValueKind::Switch)
-    //                         fprintf(f, "Block %u -> [SWITCH STATEMENT (multi-edge)]\n", id);
-    //                     else if (kind == LLVMBC::ValueKind::Return)
-    //                         fprintf(f, "Block %u -> [RETURN/EXIT]\n", id);
-    //                     else if (kind == LLVMBC::ValueKind::Unreachable)
-    //                         fprintf(f, "Block %u -> [UNREACHABLE]\n", id);
-    //                     else
-    //                         fprintf(f, "Block %u -> [UNKNOWN: %d]\n", id, (int)kind);
-    //                 }
-    //                 else
-    //                 {
-    //                     fprintf(f, "Block %u -> [NO TERMINATOR]\n", id);
-    //                 }
-                    
-    //                 id++;
-    //             }
-    //         }
-    //         fprintf(f, "Total Blocks: %u\n\n", id);
-    //         fclose(f);
-    //     }
-    // }
-	//-=-----------------------------------------------------
-	//     {
-    //     auto &llvm_module = converter->bc_parser.get_module();
-        
-    //     FILE *f = fopen("dxil_direct_extraction.txt", "a");
-    //     if (f)
-    //     {
-    //         fprintf(f, "=== Shader: %s ===\n", converter->entry_point.c_str());
-    //         uint32_t id = 0;
-            
-    //         // Bring back the map to link pointers to IDs
-    //         std::unordered_map<LLVMBC::BasicBlock*, uint32_t> block_map;
-            
-    //         for (auto *func : llvm_module)
-    //         {
-    //             if (!func) continue;
-                
-    //             for (auto &bb : *func)
-    //             {
-    //                 // Map the memory address to our 0,1,2,3 ID
-    //                 block_map[&bb] = id;
-                    
-    //                 auto *term = bb.getTerminator(); 
-                    
-    //                 if (term)
-    //                 {
-    //                     // ==========================================
-    //                     // THE MAGIC TRICK: Force resolve placeholders!
-    //                     // ==========================================
-    //                     term->resolve_proxy_values();
+//                         uint32_t true_id = 9999;
+//                         uint32_t false_id = 9999;
 
-    //                     LLVMBC::Value *v = term;
-    //                     auto kind = v->get_value_kind();
+//                         if (true_ptr) {
+//                             auto it = id_map.find(true_ptr->get_tween_id());
+//                             if (it != id_map.end()) true_id = it->second;
+//                         }
+//                         if (false_ptr) {
+//                             auto it = id_map.find(false_ptr->get_tween_id());
+//                             if (it != id_map.end()) false_id = it->second;
+//                         }
                         
-    //                     if (kind == LLVMBC::ValueKind::Branch)
-    //                     {
-    //                         auto *branch = static_cast<LLVMBC::BranchInst*>(term);
-    //                         if (branch->isConditional())
-    //                         {
-    //                             // SAFE LOOKUP using .find()
-    //                             auto it_true = block_map.find(branch->getSuccessor(0));
-    //                             auto it_false = block_map.find(branch->getSuccessor(1));
-                                
-    //                             uint32_t true_id = (it_true != block_map.end()) ? it_true->second : 9999;
-    //                             uint32_t false_id = (it_false != block_map.end()) ? it_false->second : 9999;
-                                
-    //                             fprintf(f, "Block %u -> [IF/ELSE: True->Block %u, False->Block %u]\n", id, true_id, false_id);
-    //                         }
-    //                         else
-    //                         {
-    //                             auto it_target = block_map.find(branch->getSuccessor(0));
-    //                             uint32_t target_id = (it_target != block_map.end()) ? it_target->second : 9999;
-    //                             fprintf(f, "Block %u -> [JUMP to Block %u]\n", id, target_id);
-    //                         }
-    //                     }
-    //                     else if (kind == LLVMBC::ValueKind::Switch)
-    //                         fprintf(f, "Block %u -> [SWITCH STATEMENT]\n", id);
-    //                     else if (kind == LLVMBC::ValueKind::Return)
-    //                         fprintf(f, "Block %u -> [RETURN/EXIT]\n", id);
-    //                     else if (kind == LLVMBC::ValueKind::Unreachable)
-    //                         fprintf(f, "Block %u -> [UNREACHABLE]\n", id);
-    //                     else
-    //                         fprintf(f, "Block %u -> [UNKNOWN: %d]\n", id, (int)kind);
-    //                 }
-    //                 else
-    //                 {
-    //                     fprintf(f, "Block %u -> [NO TERMINATOR]\n", id);
-    //                 }
-                    
-    //                 id++;
-    //             }
-    //         }
-    //         fprintf(f, "Total Blocks: %u\n\n", id);
-    //         fclose(f);
-    //     }
-    // }
-	
-	//------------------------------------------------------
+//                         fprintf(f, "Block %u -> [IF/ELSE: True->Block %u, False->Block %u]\n", info.id, true_id, false_id);
+//                     }
+//                     else
+//                     {
+//                         auto *target_ptr = branch->getSuccessor(0);
+//                         uint32_t target_id = 9999;
 
-
-	//     {
-    //     auto &llvm_module = converter->bc_parser.get_module();
-        
-    //     // FILE *f = fopen("dxil_direct_extraction.txt", "a");
-	// 	FILE *f = fopen("dxil_direct_extraction.txt", "w");
-    //     if (f)
-    //     {
-    //         fprintf(f, "=== Shader: %s ===\n", converter->entry_point.c_str());
-            
-    //         for (auto *func : llvm_module)
-    //         {
-    //             if (!func) continue;
-                
-    //             // Map the DXIL Bitcode IDs to our simple 0,1,2 IDs
-    //             std::unordered_map<uint64_t, uint32_t> id_map;
-                
-    //             struct BranchInfo { uint32_t id; LLVMBC::BranchInst* branch; };
-    //             std::vector<BranchInfo> pending_branches;
-                
-    //             uint32_t id = 0;
-
-    //             // ==========================================
-    //             // PASS 1: Collect Bitcode IDs
-    //             // ==========================================
-    //             for (auto &bb : *func)
-    //             {
-    //                 // GET THE HIDDEN DXIL BITCODE ID!
-    //                 uint64_t bitcode_id = bb.get_tween_id(); 
-    //                 id_map[bitcode_id] = id;
-                    
-    //                 auto *term = bb.getTerminator(); 
-    //                 if (term)
-    //                 {
-    //                     LLVMBC::Value *v = term;
-    //                     if (v->get_value_kind() == LLVMBC::ValueKind::Branch)
-    //                     {
-    //                         pending_branches.push_back({id, static_cast<LLVMBC::BranchInst*>(term)});
-    //                     }
-    //                     else if (v->get_value_kind() == LLVMBC::ValueKind::Return)
-    //                         fprintf(f, "Block %u -> [RETURN/EXIT]\n", id);
-    //                     else if (v->get_value_kind() == LLVMBC::ValueKind::Switch)
-    //                         fprintf(f, "Block %u -> [SWITCH]\n", id);
-    //                     else if (v->get_value_kind() == LLVMBC::ValueKind::Unreachable)
-    //                         fprintf(f, "Block %u -> [UNREACHABLE]\n", id);
-    //                 }
-    //                 id++;
-    //             }
-
-    //             // ==========================================
-    //             // PASS 2: Read the IDs straight out of the Proxies!
-    //             // ==========================================
-	// 			// for (auto &info : pending_branches)
-    //             // {
-    //             //     auto *branch = info.branch;
-    //             //     auto *target_ptr = branch->getSuccessor(0); // Just check the first target
-                    
-    //             //     if (!target_ptr) {
-    //             //         fprintf(f, "Block %u -> Target is NULL!\n", info.id);
-    //             //     } else {
-    //             //         int kind = (int)target_ptr->get_value_kind();
-    //             //         uint64_t tween = target_ptr->get_tween_id();
+//                         if (target_ptr) {
+//                             auto it = id_map.find(target_ptr->get_tween_id());
+//                             if (it != id_map.end()) target_id = it->second;
+//                         }
                         
-    //             //         fprintf(f, "Block %u -> [DEBUG: Kind=%d, TweenID=%llu]\n", info.id, kind, (unsigned long long)tween);
-    //             //     }
-    //             // }
+//                         fprintf(f, "Block %u -> [JUMP to Block %u]\n", info.id, target_id);
+//                     }
+//                 }
 
-	// 			 // ==========================================
-    //             // PASS 2: THE FINAL WORKING VERSION
-    //             // ==========================================
-    //             for (auto &info : pending_branches)
-    //             {
-    //                 auto *branch = info.branch;
-    //                 if (branch->isConditional())
-    //                 {
-    //                     auto *true_ptr = branch->getSuccessor(0);
-    //                     auto *false_ptr = branch->getSuccessor(1);
-                        
-    //                     uint32_t true_id = 9999;
-    //                     uint32_t false_id = 9999;
-
-    //                     // NO "IF" CHECK! JUST LOOK UP THE TWEEN ID!
-    //                     if (true_ptr) {
-    //                         auto it = id_map.find(true_ptr->get_tween_id());
-    //                         if (it != id_map.end()) true_id = it->second;
-    //                     }
-    //                     if (false_ptr) {
-    //                         auto it = id_map.find(false_ptr->get_tween_id());
-    //                         if (it != id_map.end()) false_id = it->second;
-    //                     }
-                        
-    //                     fprintf(f, "Block %u -> [IF/ELSE: True->Block %u, False->Block %u]\n", info.id, true_id, false_id);
-    //                 }
-    //                 else
-    //                 {
-    //                     auto *target_ptr = branch->getSuccessor(0);
-    //                     uint32_t target_id = 9999;
-
-    //                     if (target_ptr) {
-    //                         auto it = id_map.find(target_ptr->get_tween_id());
-    //                         if (it != id_map.end()) target_id = it->second;
-    //                     }
-                        
-    //                     fprintf(f, "Block %u -> [JUMP to Block %u]\n", info.id, target_id);
-    //                 }
-    //             }
-
-
-    //             fprintf(f, "Total Blocks: %u\n\n", id);
-    //         }
-    //         fclose(f);
-    //     }
-    // }
-
-	// --------------------------------
-
-
-	// Add this right above the extraction block so it lives forever
-static std::mutex file_write_mutex; 
-
+//                 fprintf(f, "Total Blocks: %u\n\n", id);
+//             }
+//             fclose(f);
+//         }
+//     }
+// ====================================================================
+    // DXIL-SIDE EXTRACTION (Raw DXIL CFG before any transformation)
+    // Output: dxil_direct_extraction.txt
+    // 
+    // NOTE: The SPIR-V correlation is automatically written to
+    //       spirv_correlation.txt by the converter itself
+    // ====================================================================
     {
+        static std::mutex file_write_mutex;
         auto &llvm_module = converter->bc_parser.get_module();
         
-        // ==========================================
-        // THREAD-SAFE FILE WRITING
-        // ==========================================
-        std::lock_guard<std::mutex> lock(file_write_mutex); // Threads wait here!
+        std::lock_guard<std::mutex> lock(file_write_mutex);
         
-        FILE *f = fopen("dxil_direct_extraction.txt", "a"); // Use "a" to keep all shaders!
+        FILE *f = fopen("dxil_direct_extraction.txt", "a");
         if (f)
         {
             fprintf(f, "=== Shader: %s ===\n", converter->entry_point.c_str());
@@ -1121,41 +912,166 @@ static std::mutex file_write_mutex;
                 std::unordered_map<uint64_t, uint32_t> id_map;
                 struct BranchInfo { uint32_t id; LLVMBC::BranchInst* branch; };
                 std::vector<BranchInfo> pending_branches;
-                uint32_t id = 0;
+                uint32_t block_id = 0;
+                uint32_t global_instr_id = 0;  // Sequential instruction counter
 
-                // PASS 1: Collect Bitcode IDs
+                // PASS 1: Extract blocks, instructions, and terminators
                 for (auto &bb : *func)
                 {
                     uint64_t bitcode_id = bb.get_tween_id(); 
-                    id_map[bitcode_id] = id;
+                    id_map[bitcode_id] = block_id;
                     
+                    fprintf(f, "\n[Block %u]\n", block_id);
+                    
+                    uint32_t local_instr_id = 0;
+                    for (auto &instr : bb)
+                    {
+                        auto *value = static_cast<LLVMBC::Value*>(&instr);
+                        auto kind = value->get_value_kind();
+                          switch (kind)
+                        {
+                            case LLVMBC::ValueKind::BinaryOperator:
+                            {
+                                auto *binop = static_cast<LLVMBC::BinaryOperator*>(&instr);
+                                fprintf(f, "  [%u:%u] BinaryOp(%u)\n", 
+                                        global_instr_id, local_instr_id, 
+                                        (unsigned)binop->getOpcode());
+                                break;
+                            }
+                            
+                            case LLVMBC::ValueKind::Cast:
+                            {
+                                auto *cast_inst = static_cast<LLVMBC::CastInst*>(&instr);
+                                fprintf(f, "  [%u:%u] Cast(%u)\n", 
+                                        global_instr_id, local_instr_id,
+                                        (unsigned)cast_inst->getOpcode());
+                                break;
+                            }
+                            
+                            case LLVMBC::ValueKind::ICmp:
+                            {
+                                auto *cmp = static_cast<LLVMBC::ICmpInst*>(&instr);
+                                fprintf(f, "  [%u:%u] ICmp(pred=%u)\n", 
+                                        global_instr_id, local_instr_id,
+                                        (unsigned)cmp->getPredicate());
+                                break;
+                            }
+                            
+                            case LLVMBC::ValueKind::FCmp:
+                            {
+                                auto *cmp = static_cast<LLVMBC::FCmpInst*>(&instr);
+                                fprintf(f, "  [%u:%u] FCmp(pred=%u)\n", 
+                                        global_instr_id, local_instr_id,
+                                        (unsigned)cmp->getPredicate());
+                                break;
+                            }
+                            
+                            case LLVMBC::ValueKind::UnaryOperator:
+                            {
+                                auto *unop = static_cast<LLVMBC::UnaryOperator*>(&instr);
+                                fprintf(f, "  [%u:%u] UnaryOp(%u)\n", 
+                                        global_instr_id, local_instr_id,
+                                        (unsigned)unop->getOpcode());
+                                break;
+                            }
+                            
+                            case LLVMBC::ValueKind::AtomicRMW:
+                            {
+                                auto *atomic = static_cast<LLVMBC::AtomicRMWInst*>(&instr);
+                                fprintf(f, "  [%u:%u] AtomicRMW(op=%u)\n", 
+                                        global_instr_id, local_instr_id,
+                                        (unsigned)atomic->getOperation());
+                                break;
+                            }
+                            
+                            case LLVMBC::ValueKind::Call:
+                                fprintf(f, "  [%u:%u] Call\n", global_instr_id, local_instr_id);
+                                break;
+                            case LLVMBC::ValueKind::Load:
+                                fprintf(f, "  [%u:%u] Load\n", global_instr_id, local_instr_id);
+                                break;
+                            case LLVMBC::ValueKind::Store:
+                                fprintf(f, "  [%u:%u] Store\n", global_instr_id, local_instr_id);
+                                break;
+                            case LLVMBC::ValueKind::GetElementPtr:
+                                fprintf(f, "  [%u:%u] GEP\n", global_instr_id, local_instr_id);
+                                break;                            case LLVMBC::ValueKind::ExtractValue:
+                                fprintf(f, "  [%u:%u] ExtractValue\n", global_instr_id, local_instr_id);
+                                break;
+                            case LLVMBC::ValueKind::CompositeConstruct:
+                                fprintf(f, "  [%u:%u] CompositeConstruct\n", global_instr_id, local_instr_id);
+                                break;
+                            case LLVMBC::ValueKind::PHI:
+                                fprintf(f, "  [%u:%u] PHI\n", global_instr_id, local_instr_id);
+                                break;
+                            case LLVMBC::ValueKind::Select:
+                                fprintf(f, "  [%u:%u] Select\n", global_instr_id, local_instr_id);
+                                break;
+                            case LLVMBC::ValueKind::Alloca:
+                                fprintf(f, "  [%u:%u] Alloca\n", global_instr_id, local_instr_id);
+                                break;
+                            case LLVMBC::ValueKind::ShuffleVector:
+                                fprintf(f, "  [%u:%u] ShuffleVector\n", global_instr_id, local_instr_id);
+                                break;
+                            case LLVMBC::ValueKind::ExtractElement:
+                                fprintf(f, "  [%u:%u] ExtractElement\n", global_instr_id, local_instr_id);
+                                break;
+                            case LLVMBC::ValueKind::InsertElement:
+                                fprintf(f, "  [%u:%u] InsertElement\n", global_instr_id, local_instr_id);
+                                break;
+                            case LLVMBC::ValueKind::AtomicCmpXchg:
+                                fprintf(f, "  [%u:%u] AtomicCmpXchg\n", global_instr_id, local_instr_id);
+                                break;
+                            default:
+                                fprintf(f, "  [%u:%u] Other(kind=%u)\n", 
+                                        global_instr_id, local_instr_id, (unsigned)kind);
+                                break;
+                        }
+                        
+                        global_instr_id++;
+                        local_instr_id++;
+                    }
+                    
+                    // Terminator
                     auto *term = bb.getTerminator(); 
                     if (term)
                     {
                         LLVMBC::Value *v = term;
-                        if (v->get_value_kind() == LLVMBC::ValueKind::Branch)
-                            pending_branches.push_back({id, static_cast<LLVMBC::BranchInst*>(term)});
-                        else if (v->get_value_kind() == LLVMBC::ValueKind::Return)
-                            fprintf(f, "Block %u -> [RETURN/EXIT]\n", id);
-                        else if (v->get_value_kind() == LLVMBC::ValueKind::Switch)
-                            fprintf(f, "Block %u -> [SWITCH]\n", id);
-                        else if (v->get_value_kind() == LLVMBC::ValueKind::Unreachable)
-                            fprintf(f, "Block %u -> [UNREACHABLE]\n", id);
+                        auto term_kind = v->get_value_kind();
+                        
+                        if (term_kind == LLVMBC::ValueKind::Branch)
+                        {
+                            pending_branches.push_back({block_id, static_cast<LLVMBC::BranchInst*>(term)});
+                        }
+                        else if (term_kind == LLVMBC::ValueKind::Return)
+                        {
+                            fprintf(f, "  -> [RETURN]\n");
+                        }
+                        else if (term_kind == LLVMBC::ValueKind::Switch)
+                        {
+                            fprintf(f, "  -> [SWITCH]\n");
+                        }
+                        else if (term_kind == LLVMBC::ValueKind::Unreachable)
+                        {
+                            fprintf(f, "  -> [UNREACHABLE]\n");
+                        }
                     }
-                    id++;
+                    
+                    block_id++;
                 }
 
-                // PASS 2: THE FINAL WORKING VERSION
+                // PASS 2: Resolve branch targets
+                fprintf(f, "\n--- Branches ---\n");
                 for (auto &info : pending_branches)
                 {
                     auto *branch = info.branch;
                     if (branch->isConditional())
                     {
+                        uint32_t true_id = UINT32_MAX;
+                        uint32_t false_id = UINT32_MAX;
+
                         auto *true_ptr = branch->getSuccessor(0);
                         auto *false_ptr = branch->getSuccessor(1);
-                        
-                        uint32_t true_id = 9999;
-                        uint32_t false_id = 9999;
 
                         if (true_ptr) {
                             auto it = id_map.find(true_ptr->get_tween_id());
@@ -1166,28 +1082,31 @@ static std::mutex file_write_mutex;
                             if (it != id_map.end()) false_id = it->second;
                         }
                         
-                        fprintf(f, "Block %u -> [IF/ELSE: True->Block %u, False->Block %u]\n", info.id, true_id, false_id);
+                        fprintf(f, "Block %u -> [IF: True->%u, False->%u]\n", 
+                                info.id, true_id, false_id);
                     }
                     else
                     {
+                        uint32_t target_id = UINT32_MAX;
                         auto *target_ptr = branch->getSuccessor(0);
-                        uint32_t target_id = 9999;
 
                         if (target_ptr) {
                             auto it = id_map.find(target_ptr->get_tween_id());
                             if (it != id_map.end()) target_id = it->second;
                         }
                         
-                        fprintf(f, "Block %u -> [JUMP to Block %u]\n", info.id, target_id);
+                        fprintf(f, "Block %u -> [JUMP to %u]\n", info.id, target_id);
                     }
                 }
 
-                fprintf(f, "Total Blocks: %u\n\n", id);
+                fprintf(f, "\nTotal Blocks: %u\n", block_id);
+                fprintf(f, "Total Instructions: %u\n", global_instr_id);
             }
+            fprintf(f, "========================================\n\n");
             fclose(f);
         }
     }
-
+    // ====================================================================
 	//---------------------------------
 
 	{

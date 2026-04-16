@@ -163,6 +163,16 @@ struct Operation
 		SubgroupSyncPost = 1 << 4
 	};
 	uint8_t flags = 0;
+
+	//---------ARJUN_LOGGER-----16/4/26
+	// ============================================================
+    // DEBUG CORRELATION TRACKING - Add these 4 fields
+    // ============================================================
+    uint32_t debug_dxil_id = UINT32_MAX;   // Sequential DXIL instruction ID
+    uint32_t debug_dxil_op = UINT32_MAX;   // DXIL opcode number
+    uint32_t debug_dxil_kind = UINT32_MAX; // DXIL instruction kind
+    uint32_t debug_block_id = UINT32_MAX;  // Source basic block index
+    // ============================================================
 };
 
 struct Terminator

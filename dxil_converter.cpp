@@ -38,6 +38,232 @@
 #include <utility>
 #include <algorithm>
 
+
+//ARJUN------------LOGGER-----------------16/4/26
+// In dxil_converter.cpp - add after all #includes
+
+namespace
+{
+
+const char* debug_spv_op_name(spv::Op op)
+{
+    switch (op)
+    {
+        // Arithmetic
+        case spv::OpFAdd: return "OpFAdd";
+        case spv::OpFSub: return "OpFSub";
+        case spv::OpFMul: return "OpFMul";
+        case spv::OpFDiv: return "OpFDiv";
+        case spv::OpFNegate: return "OpFNegate";
+        case spv::OpFRem: return "OpFRem";
+        case spv::OpFMod: return "OpFMod";
+        case spv::OpIAdd: return "OpIAdd";
+        case spv::OpISub: return "OpISub";
+        case spv::OpIMul: return "OpIMul";
+        case spv::OpSDiv: return "OpSDiv";
+        case spv::OpUDiv: return "OpUDiv";
+        case spv::OpSRem: return "OpSRem";
+        case spv::OpSMod: return "OpSMod";
+        case spv::OpUMod: return "OpUMod";
+        case spv::OpShiftLeftLogical: return "OpShiftLeftLogical";
+        case spv::OpShiftRightLogical: return "OpShiftRightLogical";
+        case spv::OpShiftRightArithmetic: return "OpShiftRightArithmetic";
+        case spv::OpBitwiseAnd: return "OpBitwiseAnd";
+        case spv::OpBitwiseOr: return "OpBitwiseOr";
+        case spv::OpBitwiseXor: return "OpBitwiseXor";
+        case spv::OpNot: return "OpNot";
+        case spv::OpBitReverse: return "OpBitReverse";
+        case spv::OpBitCount: return "OpBitCount";
+        
+        // Conversions
+        case spv::OpConvertFToU: return "OpConvertFToU";
+        case spv::OpConvertFToS: return "OpConvertFToS";
+        case spv::OpConvertSToF: return "OpConvertSToF";
+        case spv::OpConvertUToF: return "OpConvertUToF";
+        case spv::OpUConvert: return "OpUConvert";
+        case spv::OpSConvert: return "OpSConvert";
+        case spv::OpFConvert: return "OpFConvert";
+        case spv::OpBitcast: return "OpBitcast";
+        
+        // Comparisons
+        case spv::OpIEqual: return "OpIEqual";
+        case spv::OpINotEqual: return "OpINotEqual";
+        case spv::OpUGreaterThan: return "OpUGreaterThan";
+        case spv::OpSGreaterThan: return "OpSGreaterThan";
+        case spv::OpUGreaterThanEqual: return "OpUGreaterThanEqual";
+        case spv::OpSGreaterThanEqual: return "OpSGreaterThanEqual";
+        case spv::OpULessThan: return "OpULessThan";
+        case spv::OpSLessThan: return "OpSLessThan";
+        case spv::OpULessThanEqual: return "OpULessThanEqual";
+        case spv::OpSLessThanEqual: return "OpSLessThanEqual";
+        case spv::OpFOrdEqual: return "OpFOrdEqual";
+        case spv::OpFOrdNotEqual: return "OpFOrdNotEqual";
+        case spv::OpFOrdLessThan: return "OpFOrdLessThan";
+        case spv::OpFOrdGreaterThan: return "OpFOrdGreaterThan";
+        case spv::OpFOrdLessThanEqual: return "OpFOrdLessThanEqual";
+        case spv::OpFOrdGreaterThanEqual: return "OpFOrdGreaterThanEqual";
+        case spv::OpFUnordEqual: return "OpFUnordEqual";
+        case spv::OpFUnordNotEqual: return "OpFUnordNotEqual";
+        case spv::OpFUnordLessThan: return "OpFUnordLessThan";
+        case spv::OpFUnordGreaterThan: return "OpFUnordGreaterThan";
+        case spv::OpFUnordLessThanEqual: return "OpFUnordLessThanEqual";
+        case spv::OpFUnordGreaterThanEqual: return "OpFUnordGreaterThanEqual";
+        case spv::OpLogicalEqual: return "OpLogicalEqual";
+        case spv::OpLogicalNotEqual: return "OpLogicalNotEqual";
+        case spv::OpLogicalOr: return "OpLogicalOr";
+        case spv::OpLogicalAnd: return "OpLogicalAnd";
+        case spv::OpLogicalNot: return "OpLogicalNot";
+        
+        // Memory
+        case spv::OpLoad: return "OpLoad";
+        case spv::OpStore: return "OpStore";
+        case spv::OpAccessChain: return "OpAccessChain";
+        case spv::OpInBoundsAccessChain: return "OpInBoundsAccessChain";
+        case spv::OpPtrAccessChain: return "OpPtrAccessChain";
+        case spv::OpArrayLength: return "OpArrayLength";
+        case spv::OpCopyMemory: return "OpCopyMemory";
+        case spv::OpCopyMemorySized: return "OpCopyMemorySized";
+        
+        // Composite
+        case spv::OpCompositeConstruct: return "OpCompositeConstruct";
+        case spv::OpCompositeExtract: return "OpCompositeExtract";
+        case spv::OpCompositeInsert: return "OpCompositeInsert";
+        case spv::OpVectorShuffle: return "OpVectorShuffle";
+        case spv::OpVectorExtractDynamic: return "OpVectorExtractDynamic";
+        case spv::OpVectorInsertDynamic: return "OpVectorInsertDynamic";
+        case spv::OpVectorTimesScalar: return "OpVectorTimesScalar";
+        case spv::OpMatrixTimesScalar: return "OpMatrixTimesScalar";
+        case spv::OpVectorTimesMatrix: return "OpVectorTimesMatrix";
+        case spv::OpMatrixTimesVector: return "OpMatrixTimesVector";
+        case spv::OpMatrixTimesMatrix: return "OpMatrixTimesMatrix";
+        case spv::OpTranspose: return "OpTranspose";
+        case spv::OpOuterProduct: return "OpOuterProduct";
+        
+        // Control Flow
+        case spv::OpBranch: return "OpBranch";
+        case spv::OpBranchConditional: return "OpBranchConditional";
+        case spv::OpSwitch: return "OpSwitch";
+        case spv::OpReturn: return "OpReturn";
+        case spv::OpReturnValue: return "OpReturnValue";
+        case spv::OpPhi: return "OpPhi";
+        case spv::OpSelect: return "OpSelect";
+        case spv::OpKill: return "OpKill";
+        
+        // Function
+        case spv::OpFunctionCall: return "OpFunctionCall";
+        case spv::OpVariable: return "OpVariable";
+        
+        // Atomics
+        case spv::OpAtomicLoad: return "OpAtomicLoad";
+        case spv::OpAtomicStore: return "OpAtomicStore";
+        case spv::OpAtomicExchange: return "OpAtomicExchange";
+        case spv::OpAtomicCompareExchange: return "OpAtomicCompareExchange";
+        case spv::OpAtomicCompareExchangeWeak: return "OpAtomicCompareExchangeWeak";
+        case spv::OpAtomicIIncrement: return "OpAtomicIIncrement";
+        case spv::OpAtomicIDecrement: return "OpAtomicIDecrement";
+        case spv::OpAtomicIAdd: return "OpAtomicIAdd";
+        case spv::OpAtomicISub: return "OpAtomicISub";
+        case spv::OpAtomicSMin: return "OpAtomicSMin";
+        case spv::OpAtomicUMin: return "OpAtomicUMin";
+        case spv::OpAtomicSMax: return "OpAtomicSMax";
+        case spv::OpAtomicUMax: return "OpAtomicUMax";
+        case spv::OpAtomicAnd: return "OpAtomicAnd";
+        case spv::OpAtomicOr: return "OpAtomicOr";
+        case spv::OpAtomicXor: return "OpAtomicXor";
+        
+        // Derivatives
+        case spv::OpDPdx: return "OpDPdx";
+        case spv::OpDPdy: return "OpDPdy";
+        case spv::OpFwidth: return "OpFwidth";
+        case spv::OpDPdxFine: return "OpDPdxFine";
+        case spv::OpDPdyFine: return "OpDPdyFine";
+        case spv::OpFwidthFine: return "OpFwidthFine";
+        case spv::OpDPdxCoarse: return "OpDPdxCoarse";
+        case spv::OpDPdyCoarse: return "OpDPdyCoarse";
+        case spv::OpFwidthCoarse: return "OpFwidthCoarse";
+        
+        // Texture
+        case spv::OpSampledImage: return "OpSampledImage";
+        case spv::OpImageSampleImplicitLod: return "OpImageSampleImplicitLod";
+        case spv::OpImageSampleExplicitLod: return "OpImageSampleExplicitLod";
+        case spv::OpImageSampleDrefImplicitLod: return "OpImageSampleDrefImplicitLod";
+        case spv::OpImageSampleDrefExplicitLod: return "OpImageSampleDrefExplicitLod";
+        case spv::OpImageFetch: return "OpImageFetch";
+        case spv::OpImageGather: return "OpImageGather";
+        case spv::OpImageDrefGather: return "OpImageDrefGather";
+        case spv::OpImageRead: return "OpImageRead";
+        case spv::OpImageWrite: return "OpImageWrite";
+        case spv::OpImageQuerySizeLod: return "OpImageQuerySizeLod";
+        case spv::OpImageQuerySize: return "OpImageQuerySize";
+        case spv::OpImageQueryLevels: return "OpImageQueryLevels";
+        case spv::OpImageQuerySamples: return "OpImageQuerySamples";
+        case spv::OpImageQueryLod: return "OpImageQueryLod";
+        
+        // ExtInst
+        case spv::OpExtInst: return "OpExtInst";
+        
+        // Misc
+        case spv::OpUndef: return "OpUndef";
+        case spv::OpCopyObject: return "OpCopyObject";
+        case spv::OpCopyLogical: return "OpCopyLogical";
+        
+        default: return "OpUnknown";
+    }
+}
+
+const char* debug_dxil_kind_name(uint32_t kind)
+{
+    // LLVMBC::ValueKind mapping
+    switch (kind)
+    {
+        case 0:  return "Other";
+        case 1:  return "Arg";
+        case 2:  return "BasicBlock";
+        case 3:  return "Function";
+        case 4:  return "GlobalVar";
+        case 5:  return "ConstInt";
+        case 6:  return "ConstFP";
+        case 7:  return "ConstAggregateZero";
+        case 8:  return "ConstDataArray";
+        case 9:  return "ConstDataVector";
+        case 10: return "ConstAggregate";
+        case 11: return "Undef";
+        case 12: return "ConstExpr";
+        case 13: return "Return";
+        case 14: return "Unreachable";
+        case 15: return "BinaryOp";
+        case 16: return "UnaryOp";
+        case 17: return "Cast";
+        case 18: return "Select";
+        case 19: return "ExtractVal";
+        case 20: return "Alloca";
+        case 21: return "GEP";
+        case 22: return "Load";
+        case 23: return "Store";
+        case 24: return "CmpBase";
+        case 25: return "FCmp";
+        case 26: return "ICmp";
+        case 27: return "Branch";
+        case 28: return "Switch";
+        case 29: return "PHI";
+        case 30: return "AtomicRMW";
+        case 31: return "AtomicCmpXchg";
+        case 32: return "ShuffleVec";
+        case 33: return "ExtractElem";
+        case 34: return "InsertElem";
+        case 35: return "Call";
+        case 36: return "Proxy";
+        case 37: return "InsertVal";
+        case 38: return "CompositeConstruct";
+        default: return "Unknown";
+    }
+}
+
+} // anonymous namespace
+//-----------------------------------------------
+
+
+
 namespace dxil_spv
 {
 Converter::Converter(LLVMBCParser &bitcode_parser_, LLVMBCParser *bitcode_reflection_parser_, SPIRVModule &module_)
@@ -6326,6 +6552,16 @@ bool Converter::Impl::emit_instruction(CFGNode *block, const llvm::Instruction &
 		return true;
 	}
 
+	//--------------ARJUN-----logger---16/4/26---------
+	// ============================================================
+    // DEBUG CORRELATION TRACKING - Add these lines
+    // ============================================================
+    debug_track_dxil_source(instruction);
+    uint32_t current_dxil_id = debug_dxil_instr_counter++;
+    // ============================================================
+	//-----------------------------------------------
+
+
 	current_block = &block->ir.operations;
 
 	if (auto *call_inst = llvm::dyn_cast<llvm::CallInst>(&instruction))
@@ -8275,6 +8511,16 @@ CFGNode *Converter::Impl::convert_function(const Vector<llvm::BasicBlock *> &vis
 {
 	bool has_partial_unroll = false;
 
+	//--ARJUN-LOGGER-16/4/26-------
+	    // ============================================================
+    // DEBUG CORRELATION TRACKING - Reset and enable
+    // ============================================================
+    debug_dxil_block_counter = 0;
+    debug_dxil_instr_counter = 0;
+    debug_correlation_enabled = primary_code; // Only for main function
+    // ============================================================
+	//-ARJUN---LOGGER----16/4/26-------
+
 	for (auto *bb : visit_order)
 	{
 		auto *meta = bb_map[bb];
@@ -8293,6 +8539,16 @@ CFGNode *Converter::Impl::convert_function(const Vector<llvm::BasicBlock *> &vis
 			if (instrumentation.invocation_id_var_id && primary_code)
 				emit_write_instrumentation_invocation_id(node);
 		}
+
+		//-----------ARJUN-LOGGER-16/4/26-------
+		// ============================================================
+        // DEBUG CORRELATION TRACKING - Increment block counter
+        // ============================================================
+        if (debug_correlation_enabled)
+            debug_dxil_block_counter++;
+        // ============================================================
+
+		//------------------------------------------------------------
 
 		auto sink_itr = bb_to_sinks.find(bb);
 		if (sink_itr != bb_to_sinks.end())
@@ -8926,6 +9182,15 @@ ConvertedFunction Converter::Impl::convert_entry_point()
 	else
 	{
 		result.entry.entry = convert_function(visit_order, true);
+
+
+		//--------------ARJUN LOGGER---------16/4/26----------------
+		// ============================================================
+		// DEBUG CORRELATION TRACKING - Reset and disable
+		// ============================================================
+        if (result.entry.entry)
+            debug_write_correlation_report(result.entry.entry, *result.node_pool);
+		// ============================================================
 		if (shader_analysis.needs_auto_group_shared_barriers && options.quirks.group_shared_auto_barrier)
 		{
 			CFGStructurizer cfg{result.entry.entry, pool, spirv_module};
@@ -9016,12 +9281,157 @@ void Converter::Impl::rewrite_value(const llvm::Value *value, spv::Id id)
 void Converter::Impl::add(Operation *op, bool is_rov)
 {
 	assert(current_block);
+
+	//ARJUN-------LOGGER---------16/4/26---
+    // ============================================================
+    // DEBUG CORRELATION TRACKING - Tag the operation
+    // ============================================================
+    if (debug_correlation_enabled)
+    {
+        op->debug_dxil_id = debug_dxil_instr_counter;
+        op->debug_dxil_op = debug_current_dxil_op;
+        op->debug_dxil_kind = debug_current_dxil_kind;
+        op->debug_block_id = debug_dxil_block_counter;
+    }
+    // ============================================================
+
 	if (is_rov)
 		current_block->push_back(allocate(spv::OpBeginInvocationInterlockEXT));
 	current_block->push_back(op);
 	if (is_rov)
 		current_block->push_back(allocate(spv::OpEndInvocationInterlockEXT));
 }
+
+//ARJUN-----LOGGER---------16/4/26---
+// In dxil_converter.cpp - add as methods of Converter::Impl
+
+void Converter::Impl::debug_track_dxil_source(const llvm::Instruction &instr)
+{
+    if (!debug_correlation_enabled)
+        return;
+    
+    auto *value = static_cast<const LLVMBC::Value*>(&instr);
+    debug_current_dxil_kind = static_cast<uint32_t>(value->get_value_kind());
+    debug_current_dxil_op = UINT32_MAX;
+    
+    // Try to extract specific opcode based on kind
+    if (debug_current_dxil_kind == 15) // BinaryOp
+    {
+        auto *binop = LLVMBC::cast<LLVMBC::BinaryOperator>(&instr);
+        if (binop)
+            debug_current_dxil_op = static_cast<uint32_t>(binop->getOpcode());
+    }
+    else if (debug_current_dxil_kind == 17) // Cast
+    {
+        auto *cast = LLVMBC::cast<LLVMBC::CastInst>(&instr);
+        if (cast)
+            debug_current_dxil_op = static_cast<uint32_t>(cast->getOpcode());
+    }
+    else if (debug_current_dxil_kind == 25 || debug_current_dxil_kind == 26) // FCmp/ICmp
+    {
+        auto *cmp = LLVMBC::cast<LLVMBC::CmpInst>(&instr);
+        if (cmp)
+            debug_current_dxil_op = static_cast<uint32_t>(cmp->getPredicate());
+    }
+    else if (debug_current_dxil_kind == 16) // UnaryOp
+    {
+        auto *unop = LLVMBC::cast<LLVMBC::UnaryOperator>(&instr);
+        if (unop)
+            debug_current_dxil_op = static_cast<uint32_t>(unop->getOpcode());
+    }
+    else if (debug_current_dxil_kind == 30) // AtomicRMW
+    {
+        auto *atomic = LLVMBC::cast<LLVMBC::AtomicRMWInst>(&instr);
+        if (atomic)
+            debug_current_dxil_op = static_cast<uint32_t>(atomic->getOperation());
+    }
+}
+
+void Converter::Impl::debug_write_correlation_report(CFGNode *entry, CFGNodePool &pool)
+{
+    if (!debug_correlation_enabled)
+        return;
+    
+    static std::mutex log_mutex;
+    std::lock_guard<std::mutex> lock(log_mutex);
+    
+    FILE* f = fopen("spirv_correlation.txt", "a");
+    if (!f) return;
+    
+    // Walk all blocks starting from entry
+    entry->walk_cfg_from([f](const CFGNode* node) -> bool
+    {
+        if (!node) return true;
+        
+        // Collect operations grouped by DXIL source
+        struct DxlToSpirvMapping
+        {
+            uint32_t dxil_id;
+            uint32_t dxil_op;
+            uint32_t dxil_kind;
+            uint32_t block_id;
+            Vector<const Operation*> spirv_ops;
+        };
+        
+        Vector<DxlToSpirvMapping> mappings;
+        
+        for (const auto* op : node->ir.operations)
+        {
+            if (op->debug_dxil_id == UINT32_MAX)
+                continue; // No DXIL source (e.g., structurizer-inserted ops)
+            
+            // Find existing mapping or create new
+            DxlToSpirvMapping* mapping = nullptr;
+            for (auto& m : mappings)
+            {
+                if (m.dxil_id == op->debug_dxil_id)
+                {
+                    mapping = &m;
+                    break;
+                }
+            }
+            
+            if (!mapping)
+            {
+                mappings.push_back({});
+                mapping = &mappings.back();
+                mapping->dxil_id = op->debug_dxil_id;
+                mapping->dxil_op = op->debug_dxil_op;
+                mapping->dxil_kind = op->debug_dxil_kind;
+                mapping->block_id = op->debug_block_id;
+            }
+            
+            mapping->spirv_ops.push_back(op);
+        }
+        
+        // Write mappings for this block
+        if (!mappings.empty())
+        {
+            fprintf(f, "\n[Block %u]\n", mappings[0].block_id);
+            
+            for (const auto& m : mappings)
+            {
+                fprintf(f, "  DXIL[%u] %s(op=%u) -> %zu ops: ",
+                    m.dxil_id,
+                    debug_dxil_kind_name(m.dxil_kind),
+                    m.dxil_op,
+                    m.spirv_ops.size());
+                
+                for (const auto* op : m.spirv_ops)
+                {
+                    fprintf(f, "%s ", debug_spv_op_name(op->op));
+                }
+                
+                fprintf(f, "\n");
+            }
+        }
+        
+        return true;
+    });
+    
+    fclose(f);
+}
+//-----------------------------------
 
 void Converter::Impl::register_externally_visible_write(const llvm::Value *value)
 {

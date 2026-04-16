@@ -1055,5 +1055,18 @@ public:
 
 private:
 	std::unique_ptr<Impl> impl;
+	//-------ARJUN-----LOGGER----16/4/26
+	// ============================================================
+    // DEBUG CORRELATION TRACKING
+    // ============================================================
+    uint32_t debug_dxil_instr_counter = 0;
+    uint32_t debug_dxil_block_counter = 0;
+    uint32_t debug_current_dxil_op = UINT32_MAX;
+    uint32_t debug_current_dxil_kind = UINT32_MAX;
+    bool debug_correlation_enabled = false;
+    
+    void debug_track_dxil_source(const llvm::Instruction &instr);
+    void debug_write_correlation_report(CFGNode *entry, CFGNodePool &pool);
+    // ============================================================
 };
 } // namespace dxil_spv
