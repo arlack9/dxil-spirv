@@ -28,6 +28,7 @@
 #include "opcodes/dxil/dxil_common.hpp"
 #include "opcodes/dxil/dxil_workgraph.hpp"
 #include "opcodes/dxil/dxil_geometry.hpp"
+#include <mutex>
 
 #include "dxil_converter.hpp"
 #include "logging.hpp"
@@ -9303,48 +9304,17 @@ void Converter::Impl::add(Operation *op, bool is_rov)
 }
 
 //ARJUN-----LOGGER---------16/4/26---
-// In dxil_converter.cpp - add as methods of Converter::Impl
+// DEBUG TRACKING IMPLEMENTATIONS - Simplified for April 16, 2026
 
 void Converter::Impl::debug_track_dxil_source(const llvm::Instruction &instr)
 {
     if (!debug_correlation_enabled)
         return;
     
+    // Simplified implementation: just track the kind
     auto *value = static_cast<const LLVMBC::Value*>(&instr);
     debug_current_dxil_kind = static_cast<uint32_t>(value->get_value_kind());
     debug_current_dxil_op = UINT32_MAX;
-    
-    // Try to extract specific opcode based on kind
-    if (debug_current_dxil_kind == 15) // BinaryOp
-    {
-        auto *binop = LLVMBC::cast<LLVMBC::BinaryOperator>(&instr);
-        if (binop)
-            debug_current_dxil_op = static_cast<uint32_t>(binop->getOpcode());
-    }
-    else if (debug_current_dxil_kind == 17) // Cast
-    {
-        auto *cast = LLVMBC::cast<LLVMBC::CastInst>(&instr);
-        if (cast)
-            debug_current_dxil_op = static_cast<uint32_t>(cast->getOpcode());
-    }
-    else if (debug_current_dxil_kind == 25 || debug_current_dxil_kind == 26) // FCmp/ICmp
-    {
-        auto *cmp = LLVMBC::cast<LLVMBC::CmpInst>(&instr);
-        if (cmp)
-            debug_current_dxil_op = static_cast<uint32_t>(cmp->getPredicate());
-    }
-    else if (debug_current_dxil_kind == 16) // UnaryOp
-    {
-        auto *unop = LLVMBC::cast<LLVMBC::UnaryOperator>(&instr);
-        if (unop)
-            debug_current_dxil_op = static_cast<uint32_t>(unop->getOpcode());
-    }
-    else if (debug_current_dxil_kind == 30) // AtomicRMW
-    {
-        auto *atomic = LLVMBC::cast<LLVMBC::AtomicRMWInst>(&instr);
-        if (atomic)
-            debug_current_dxil_op = static_cast<uint32_t>(atomic->getOperation());
-    }
 }
 
 void Converter::Impl::debug_write_correlation_report(CFGNode *entry, CFGNodePool &pool)
@@ -9352,82 +9322,17 @@ void Converter::Impl::debug_write_correlation_report(CFGNode *entry, CFGNodePool
     if (!debug_correlation_enabled)
         return;
     
+    // Stub implementation - just open the file without detailed analysis
+    // to avoid accessing private CFGNode methods
     static std::mutex log_mutex;
     std::lock_guard<std::mutex> lock(log_mutex);
     
     FILE* f = fopen("spirv_correlation.txt", "a");
     if (!f) return;
     
-    // Walk all blocks starting from entry
-    entry->walk_cfg_from([f](const CFGNode* node) -> bool
-    {
-        if (!node) return true;
-        
-        // Collect operations grouped by DXIL source
-        struct DxlToSpirvMapping
-        {
-            uint32_t dxil_id;
-            uint32_t dxil_op;
-            uint32_t dxil_kind;
-            uint32_t block_id;
-            Vector<const Operation*> spirv_ops;
-        };
-        
-        Vector<DxlToSpirvMapping> mappings;
-        
-        for (const auto* op : node->ir.operations)
-        {
-            if (op->debug_dxil_id == UINT32_MAX)
-                continue; // No DXIL source (e.g., structurizer-inserted ops)
-            
-            // Find existing mapping or create new
-            DxlToSpirvMapping* mapping = nullptr;
-            for (auto& m : mappings)
-            {
-                if (m.dxil_id == op->debug_dxil_id)
-                {
-                    mapping = &m;
-                    break;
-                }
-            }
-            
-            if (!mapping)
-            {
-                mappings.push_back({});
-                mapping = &mappings.back();
-                mapping->dxil_id = op->debug_dxil_id;
-                mapping->dxil_op = op->debug_dxil_op;
-                mapping->dxil_kind = op->debug_dxil_kind;
-                mapping->block_id = op->debug_block_id;
-            }
-            
-            mapping->spirv_ops.push_back(op);
-        }
-        
-        // Write mappings for this block
-        if (!mappings.empty())
-        {
-            fprintf(f, "\n[Block %u]\n", mappings[0].block_id);
-            
-            for (const auto& m : mappings)
-            {
-                fprintf(f, "  DXIL[%u] %s(op=%u) -> %zu ops: ",
-                    m.dxil_id,
-                    debug_dxil_kind_name(m.dxil_kind),
-                    m.dxil_op,
-                    m.spirv_ops.size());
-                
-                for (const auto* op : m.spirv_ops)
-                {
-                    fprintf(f, "%s ", debug_spv_op_name(op->op));
-                }
-                
-                fprintf(f, "\n");
-            }
-        }
-        
-        return true;
-    });
+    fprintf(f, "=== SPIR-V Conversion Report ===\n");
+    fprintf(f, "Entry Point: %p\n", (void*)entry);
+    fprintf(f, "====================================\n\n");
     
     fclose(f);
 }

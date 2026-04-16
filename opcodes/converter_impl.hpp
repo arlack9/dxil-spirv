@@ -1050,11 +1050,23 @@ struct Converter::Impl
 
 	bool type_can_relax_precision(const llvm::Type *type, bool known_integer_sign) const;
 	void decorate_relaxed_precision(const llvm::Type *type, spv::Id id, bool known_integer_sign);
-
 	void suggest_minimum_wave_size(unsigned wave_size);
 	void suggest_maximum_wave_size(unsigned wave_size);
 
 	static NodeInputData get_node_input(llvm::MDNode *meta);
 	static NodeOutputData get_node_output(llvm::MDNode *meta);
+
+	// ============================================================
+	// DEBUG CORRELATION TRACKING - Added April 16, 2026
+	// ============================================================
+	uint32_t debug_dxil_block_counter = 0;
+	uint32_t debug_dxil_instr_counter = 0;
+	uint32_t debug_current_dxil_op = UINT32_MAX;
+	uint32_t debug_current_dxil_kind = UINT32_MAX;
+	bool debug_correlation_enabled = false;
+	
+	void debug_track_dxil_source(const llvm::Instruction &instr);
+	void debug_write_correlation_report(CFGNode *entry, CFGNodePool &pool);
+	// ============================================================
 };
 } // namespace dxil_spv
