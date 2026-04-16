@@ -6551,14 +6551,13 @@ bool Converter::Impl::emit_instruction(CFGNode *block, const llvm::Instruction &
 	    llvm_used_ssa_values.count(&instruction) == 0)
 	{
 		return true;
-	}
-
-	//--------------ARJUN-----logger---16/4/26---------
+	}	//--------------ARJUN-----logger---16/4/26---------
 	// ============================================================
     // DEBUG CORRELATION TRACKING - Add these lines
     // ============================================================
     debug_track_dxil_source(instruction);
-    uint32_t current_dxil_id = debug_dxil_instr_counter++;
+    if (debug_correlation_enabled)
+        debug_dxil_instr_counter++;
     // ============================================================
 	//-----------------------------------------------
 
@@ -9319,21 +9318,149 @@ void Converter::Impl::debug_track_dxil_source(const llvm::Instruction &instr)
 
 void Converter::Impl::debug_write_correlation_report(CFGNode *entry, CFGNodePool &pool)
 {
-    if (!debug_correlation_enabled)
+    if (!debug_correlation_enabled || !entry)
         return;
-    
-    // Stub implementation - just open the file without detailed analysis
-    // to avoid accessing private CFGNode methods
+
     static std::mutex log_mutex;
     std::lock_guard<std::mutex> lock(log_mutex);
-    
+
     FILE* f = fopen("spirv_correlation.txt", "a");
     if (!f) return;
-    
-    fprintf(f, "=== SPIR-V Conversion Report ===\n");
-    fprintf(f, "Entry Point: %p\n", (void*)entry);
-    fprintf(f, "====================================\n\n");
-    
+
+    // Use actual entry point name from execution_mode_meta
+    fprintf(f, "=== SPIR-V Correlation Report ===\n");
+    fprintf(f, "Entry Point: %s\n\n", execution_mode_meta.entry_point_name.c_str());
+
+    // Statistics for correlation analysis
+    uint32_t total_dxil_instrs = 0;
+    uint32_t total_spirv_ops = 0;
+    uint32_t max_expansion_ratio = 0;
+    uint32_t max_expand_dxil_id = 0;
+
+    // Process entry block (walk_cfg_from is private, so only process entry)
+    if (entry && !entry->ir.operations.empty())
+    {
+        const auto& ops = entry->ir.operations;
+        uint32_t block_id = 0;
+        
+        // Get block ID from first operation
+        for (const auto* op : ops)
+        {
+            if (op && op->debug_block_id != UINT32_MAX)
+            {
+                block_id = op->debug_block_id;
+                break;
+            }
+        }
+
+        fprintf(f, "[Block %u] %zu operations\n", block_id, ops.size());
+
+        // Group operations by DXIL instruction ID
+        struct InstructionMapping
+        {
+            uint32_t dxil_id;
+            uint32_t dxil_kind;
+            uint32_t dxil_op;
+            Vector<const Operation*> spirv_ops;
+        };
+
+        Vector<InstructionMapping> mappings;
+        Vector<const Operation*> structurizer_ops;
+
+        // First pass: collect operations
+        for (const auto* op : ops)
+        {
+            if (!op)
+                continue;
+
+            // Structurizer operations don't have DXIL correlation
+            if (op->debug_dxil_id == UINT32_MAX)
+            {
+                structurizer_ops.push_back(op);
+                total_spirv_ops++;
+            }
+            else
+            {
+                // Find existing mapping or create new one
+                InstructionMapping* mapping = nullptr;
+                for (auto& m : mappings)
+                {
+                    if (m.dxil_id == op->debug_dxil_id)
+                    {
+                        mapping = &m;
+                        break;
+                    }
+                }
+
+                if (!mapping)
+                {
+                    mappings.push_back({
+                        op->debug_dxil_id,
+                        op->debug_dxil_kind,
+                        op->debug_dxil_op,
+                        {}
+                    });
+                    mapping = &mappings.back();
+                    total_dxil_instrs++;
+                }
+
+                mapping->spirv_ops.push_back(op);
+                total_spirv_ops++;
+
+                // Track expansion ratio
+                uint32_t expansion = static_cast<uint32_t>(mapping->spirv_ops.size());
+                if (expansion > max_expansion_ratio)
+                {
+                    max_expansion_ratio = expansion;
+                    max_expand_dxil_id = op->debug_dxil_id;
+                }
+            }
+        }
+
+        // Second pass: output grouped correlations
+        for (const auto& mapping : mappings)
+        {
+            const char* dxil_name = debug_dxil_kind_name(mapping.dxil_kind);
+
+            fprintf(f, "  DXIL[%u] %-15s (op=%10u) -> %zu SPIR-V ops:\n",
+                    mapping.dxil_id,
+                    dxil_name,
+                    mapping.dxil_op);
+
+            for (size_t i = 0; i < mapping.spirv_ops.size(); ++i)
+            {
+                const auto* op = mapping.spirv_ops[i];
+                fprintf(f, "    [%zu] %s (ID=%u)\n", i, 
+                        debug_spv_op_name(op->op), op->id);
+            }
+        }
+
+        // Third pass: output structurizer operations
+        if (!structurizer_ops.empty())
+        {
+            fprintf(f, "  [CFG Structurizer Ops: %zu]\n", structurizer_ops.size());
+            for (const auto* op : structurizer_ops)
+            {
+                fprintf(f, "    %s (ID=%u)\n", 
+                        debug_spv_op_name(op->op), op->id);
+            }
+        }
+
+        fprintf(f, "\n");
+    }
+
+    // Output summary statistics
+    fprintf(f, "=== Correlation Statistics ===\n");
+    fprintf(f, "Total DXIL instructions: %u\n", total_dxil_instrs);
+    fprintf(f, "Total SPIR-V operations: %u\n", total_spirv_ops);
+    if (total_dxil_instrs > 0)
+    {
+        fprintf(f, "Average expansion ratio: %.2f\n", 
+                static_cast<double>(total_spirv_ops) / total_dxil_instrs);
+        fprintf(f, "Max expansion ratio: %u (DXIL[%u])\n", 
+                max_expansion_ratio, max_expand_dxil_id);
+    }    fprintf(f, "====================================\n\n");
+
     fclose(f);
 }
 //-----------------------------------
