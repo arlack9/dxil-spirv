@@ -67,6 +67,8 @@ dxil_spirv_src = [
 
   'dxil_converter.cpp',
   'cfg_structurizer.cpp',
+  'minimal_structurizer.cpp',
+  'switch_dispatch_emitter.cpp',
   'node_pool.cpp',
   'node.cpp',
   'dxil_parser.cpp',
